@@ -1,3 +1,7 @@
+## v1.0.0 (2025-10-18)
+
+* No major changes from v0.0.4, just moved to v1.0.0 to signal that it's ready for public use
+
 ## v0.0.4 (2025-10-06)
 
 * Add Write operation to perform changes on managed devices
