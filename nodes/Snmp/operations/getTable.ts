@@ -1,6 +1,5 @@
 import { IExecuteFunctions, INodeProperties } from 'n8n-workflow';
 import { connect, getName, getVal } from '../utils';
-import { promisify } from 'node:util';
 import { type TableData } from 'net-snmp';
 
 export const properties: INodeProperties[] = [
@@ -26,17 +25,26 @@ export async function getTable(this: IExecuteFunctions, itemIndex: number) {
 	const port = this.getNodeParameter('port', itemIndex, 161) as number;
 	this.logger.debug('getTable', { baseOID });
 	const session = await connect.call(this, ip, port);
+	try {
+		const table = await new Promise<TableData>((resolve, reject) => {
+			session.table(baseOID, (error, result) => {
+				if (error) reject(error);
+				else resolve(result);
+			});
+		});
 
-	// @ts-expect-error asdf
-	const table: TableData = await promisify(session.table).call(session, baseOID);
-
-	const columnNames: Record<string, string> = {};
-	for (const column of Object.keys(Object.values(table)[0] ?? {})) {
-		const columnOID = `${baseOID}.1.${column}`;
-		columnNames[column] = (getName(columnOID) ?? columnOID).split(".").slice(-1)[0];
+		const columnNames: Record<string, string> = {};
+		for (const column of Object.keys(Object.values(table)[0] ?? {})) {
+			const columnOID = `${baseOID}.1.${column}`;
+			columnNames[column] = (getName(columnOID) ?? columnOID).split('.').slice(-1)[0];
+		}
+		return Object.entries(table).map(([index, row]) => ({
+			__index: index,
+			...Object.fromEntries(
+				Object.entries(row).map(([column, value]) => [columnNames[column], getVal(value)]),
+			),
+		}));
+	} finally {
+		session.close();
 	}
-	return Object.entries(table).map(([index, row]) => ({
-		__index: index,
-		...Object.fromEntries(Object.entries(row).map(([column, value]) => ([columnNames[column], getVal(value)]))),
-	}));
 }

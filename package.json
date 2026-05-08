@@ -28,9 +28,12 @@
     ],
     "n8n": {
         "n8nNodesApiVersion": 1,
-        "credentials": [],
+        "credentials": [
+            "dist/credentials/Snmp.credentials.js"
+        ],
         "nodes": [
-            "dist/nodes/Snmp/Snmp.node.js"
+            "dist/nodes/Snmp/Snmp.node.js",
+            "dist/nodes/Snmp/SnmpTrapTrigger.node.js"
         ]
     },
     "devDependencies": {

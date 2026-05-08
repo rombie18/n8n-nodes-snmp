@@ -39,35 +39,33 @@ async function getCred(
 	  }
 	| { version: 'v3'; cred: User }
 > {
-	let version: Versions;
-
+	let rawCred: ICredentialDataDecryptedObject;
 	try {
-		const cred = (await this.getCredentials('snmp')) as ICredentialDataDecryptedObject;
-		version = cred.version as Versions;
-		switch (version) {
-			case 'v1':
-			case 'v2c':
-				return {
-					version,
-					cred: cred.community as string,
-				};
-			case 'v3':
-				return {
-					version: 'v3',
-					cred: {
-						name: cred.user as string,
-						level: SecurityLevel[cred.level as keyof typeof SecurityLevel],
-						authProtocol: AuthProtocols[cred.authProtocol as keyof typeof AuthProtocols],
-						authKey: cred.authKey as string,
-						privProtocol: PrivProtocols[cred.privProtocol as keyof typeof PrivProtocols],
-						privKey: cred.privKey as string,
-					},
-				};
-		}
+		rawCred = (await this.getCredentials('snmp')) as ICredentialDataDecryptedObject;
 	} catch {
-		return {
-			version: 'v2c',
-		};
+		// No credentials configured — use unauthenticated v2c
+		return { version: 'v2c' };
+	}
+
+	const version = rawCred.version as Versions;
+	switch (version) {
+		case 'v1':
+		case 'v2c':
+			return { version, cred: rawCred.community as string };
+		case 'v3':
+			return {
+				version: 'v3',
+				cred: {
+					name: rawCred.user as string,
+					level: SecurityLevel[rawCred.level as keyof typeof SecurityLevel],
+					authProtocol: AuthProtocols[rawCred.authProtocol as keyof typeof AuthProtocols],
+					authKey: rawCred.authKey as string,
+					privProtocol: PrivProtocols[rawCred.privProtocol as keyof typeof PrivProtocols],
+					privKey: rawCred.privKey as string,
+				},
+			};
+		default:
+			throw new NodeOperationError(this.getNode(), `Unknown SNMP version: ${String(version)}`);
 	}
 }
 
@@ -123,7 +121,16 @@ declare module 'net-snmp' {
 		sockets?: { transport: string; address: string; port: number }[];
 	}
 
-	export function createReceiver(options: ReceiverCallback, callback: ReceiverCallback): Receiver;
+	export function createReceiver(options: ReceiverOptions, callback: ReceiverCallback): Receiver;
+
+	interface Session {
+		table(oid: string, callback: (error: Error | null, table: TableData) => void): void;
+		table(
+			oid: string,
+			maxRepetitions: number,
+			callback: (error: Error | null, table: TableData) => void,
+		): void;
+	}
 
 	export class Receiver {
 		getAuthorizer(): Authorizer;

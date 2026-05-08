@@ -4,7 +4,7 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeConnectionTypes } from 'n8n-workflow';
+import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 import { list, options as listOptions } from './operations/list';
 import { get, properties as getProperties } from './operations/get';
 import { getTable, properties as getTableProperties } from './operations/getTable';
@@ -109,54 +109,56 @@ export class Snmp implements INodeType {
 		const operation = this.getNodeParameter('operation', 0, 'listOIDs') as string;
 
 		for (let itemIndex = 0; itemIndex < this.getInputData().length; itemIndex++) {
-			// try {
-			switch (operation) {
-				case 'listOIDs':
-					items.push(
-						...(await list.call(this, itemIndex)).map((e) => ({
-							json: e,
-							pairedItem: { item: itemIndex },
-						})),
-					);
-					break;
-				case 'get':
-					items.push(
-						...(await get.call(this, itemIndex)).map((i) => ({
-							json: i,
-							pairedItem: { item: itemIndex },
-						})),
-					);
-					break;
-				case 'getTable':
-					items.push(
-						...(await getTable.call(this, itemIndex)).map((i) => ({
-							json: i,
-							pairedItem: { item: itemIndex },
-						})),
-					);
-					break;
-				case 'write':
-					items.push(
-						...(await write.call(this, itemIndex)).map((i) => ({
-							json: i,
-							pairedItem: { item: itemIndex },
-						})),
-					);
-					break;
+			try {
+				switch (operation) {
+					case 'listOIDs':
+						items.push(
+							...(await list.call(this, itemIndex)).map((e) => ({
+								json: e,
+								pairedItem: { item: itemIndex },
+							})),
+						);
+						break;
+					case 'get':
+						items.push(
+							...(await get.call(this, itemIndex)).map((i) => ({
+								json: i,
+								pairedItem: { item: itemIndex },
+							})),
+						);
+						break;
+					case 'getTable':
+						items.push(
+							...(await getTable.call(this, itemIndex)).map((i) => ({
+								json: i,
+								pairedItem: { item: itemIndex },
+							})),
+						);
+						break;
+					case 'write':
+						items.push(
+							...(await write.call(this, itemIndex)).map((i) => ({
+								json: i,
+								pairedItem: { item: itemIndex },
+							})),
+						);
+						break;
+				}
+			} catch (error) {
+				if (this.continueOnFail()) {
+					items.push({
+						json: this.getInputData()[itemIndex].json,
+						error,
+						pairedItem: itemIndex,
+					});
+				} else {
+					if (error.context) {
+						error.context.itemIndex = itemIndex;
+						throw error;
+					}
+					throw new NodeOperationError(this.getNode(), error, { itemIndex });
+				}
 			}
-			// } catch (error) {
-			// 	if (this.continueOnFail()) {
-			// 		items.push({ json: this.getInputData(itemIndex)[0].json, error, pairedItem: itemIndex });
-			// 	} else {
-			// 		if (error.context) {
-			// 			error.context.itemIndex = itemIndex;
-			// 			throw error;
-			// 		}
-			// 		throw new NodeOperationError(this.getNode(), error, {
-			// 			itemIndex,
-			// 		});
-			// 	}
-			// }
 		}
 
 		return [items];

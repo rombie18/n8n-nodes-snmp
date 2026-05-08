@@ -75,20 +75,25 @@ export class SnmpTrapTrigger implements INodeType {
 			]);
 		};
 
-		const manualTriggerFunction = async () =>
-			// eslint-disable-next-line no-async-promise-executor
-			await new Promise<void>(async (resolve) => {
-				session = await connectForTrap.call(this, port, (error, notification) => {
-					if (error) {
-						this.emitError(error);
-						// Apparently closeFunction() isn't called when emitError is called, so do it by hand here
-						session.close();
-					} else {
-						onMessage(notification);
-					}
-					resolve();
-				});
+		const manualTriggerFunction = async () => {
+			let resolveFirstMessage: () => void;
+			const firstMessage = new Promise<void>((resolve) => {
+				resolveFirstMessage = resolve;
 			});
+
+			session = await connectForTrap.call(this, port, (error, notification) => {
+				if (error) {
+					this.emitError(error);
+					// closeFunction() isn't called when emitError is called, so close manually
+					session.close();
+				} else {
+					onMessage(notification);
+				}
+				resolveFirstMessage();
+			});
+
+			await firstMessage;
+		};
 
 		if (this.getMode() === 'trigger') {
 			session = await connectForTrap.call(this, port, (error, notification) => {
