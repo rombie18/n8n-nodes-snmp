@@ -8,6 +8,7 @@ import {
 import { connectForTrap, typeToDetailed, varbindsToDetailedExecutionData } from './utils';
 import { ReceiverNotification } from 'net-snmp';
 
+// eslint-disable-next-line @n8n/community-nodes/node-usable-as-tool
 export class SnmpTrapTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'SNMP Trap Trigger',
@@ -20,7 +21,6 @@ export class SnmpTrapTrigger implements INodeType {
 		defaults: {
 			name: 'SNMP Trap',
 		},
-		usableAsTool: true,
 		inputs: [],
 		outputs: [NodeConnectionTypes.Main],
 		credentials: [

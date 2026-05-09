@@ -3,9 +3,10 @@
  *
  * Registered OIDs:
  *   Scalars (system group):
- *     1.3.6.1.2.1.1.1.0  sysDescr   OctetString  read-only   "Test SNMP Agent"
- *     1.3.6.1.2.1.1.3.0  sysUpTime  TimeTicks    read-only   12345
- *     1.3.6.1.2.1.1.5.0  sysName    OctetString  read-write  "test-host"
+ *     1.3.6.1.2.1.1.1.0  sysDescr    OctetString  read-only   "Test SNMP Agent"
+ *     1.3.6.1.2.1.1.3.0  sysUpTime   TimeTicks    read-only   12345
+ *     1.3.6.1.2.1.1.4.0  sysContact  OctetString  read-write  "admin@example.com"
+ *     1.3.6.1.2.1.1.5.0  sysName     OctetString  read-write  "test-host"
  *
  *   Table (ifTable):
  *     base OID  1.3.6.1.2.1.2.2      (ifTable)
@@ -25,6 +26,8 @@ export const OID = {
 	sysDescrInstance: '1.3.6.1.2.1.1.1.0',
 	sysUpTime: '1.3.6.1.2.1.1.3',
 	sysUpTimeInstance: '1.3.6.1.2.1.1.3.0',
+	sysContact: '1.3.6.1.2.1.1.4',
+	sysContactInstance: '1.3.6.1.2.1.1.4.0',
 	sysName: '1.3.6.1.2.1.1.5',
 	sysNameInstance: '1.3.6.1.2.1.1.5.0',
 	systemGroup: '1.3.6.1.2.1.1',
@@ -35,6 +38,7 @@ export const OID = {
 export const INITIAL_VALUES = {
 	sysDescr: 'Test SNMP Agent',
 	sysUpTime: 12345,
+	sysContact: 'admin@example.com',
 	sysName: 'test-host',
 } as const;
 
@@ -74,6 +78,13 @@ export async function createTestAgent(port: number): Promise<TestAgent> {
 		maxAccess: MaxAccess['read-only'],
 	});
 	agent.registerProvider({
+		name: 'sysContact',
+		type: MibProviderType.Scalar,
+		oid: OID.sysContact,
+		scalarType: ObjectType.OctetString,
+		maxAccess: MaxAccess['read-write'],
+	});
+	agent.registerProvider({
 		name: 'sysName',
 		type: MibProviderType.Scalar,
 		oid: OID.sysName,
@@ -100,6 +111,7 @@ export async function createTestAgent(port: number): Promise<TestAgent> {
 	function seedValues() {
 		mib.setScalarValue('sysDescr', Buffer.from(INITIAL_VALUES.sysDescr));
 		mib.setScalarValue('sysUpTime', INITIAL_VALUES.sysUpTime);
+		mib.setScalarValue('sysContact', Buffer.from(INITIAL_VALUES.sysContact));
 		mib.setScalarValue('sysName', Buffer.from(INITIAL_VALUES.sysName));
 	}
 

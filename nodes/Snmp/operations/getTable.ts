@@ -10,7 +10,7 @@ export const properties: INodeProperties[] = [
 		default: '',
 		description:
 			'The OID where the table starts. Should contain two more levels down (<code>&lt;Base OID&gt;.1.1</code> should exist, as well as .2.1 and .1.2 and so on).',
-		placeholder: 'e.g. 1.3.6.1.2.1.2.2.1',
+		placeholder: 'e.g. 1.3.6.1.2.1.2.2',
 		displayOptions: {
 			show: {
 				'/operation': ['getTable'],
@@ -20,7 +20,7 @@ export const properties: INodeProperties[] = [
 ];
 
 export async function getTable(this: IExecuteFunctions, itemIndex: number) {
-	const baseOID = this.getNodeParameter('baseOID', itemIndex, []) as string;
+	const baseOID = this.getNodeParameter('baseOID', itemIndex, '') as string;
 	const ip = this.getNodeParameter('address', itemIndex, '') as string;
 	const port = this.getNodeParameter('port', itemIndex, 161) as number;
 	this.logger.debug('getTable', { baseOID });
@@ -36,7 +36,8 @@ export async function getTable(this: IExecuteFunctions, itemIndex: number) {
 		const columnNames: Record<string, string> = {};
 		for (const column of Object.keys(Object.values(table)[0] ?? {})) {
 			const columnOID = `${baseOID}.1.${column}`;
-			columnNames[column] = (getName(columnOID) ?? columnOID).split('.').slice(-1)[0];
+			const resolved = getName(columnOID);
+			columnNames[column] = resolved ? resolved.split('.').slice(-1)[0] : `column_${column}`;
 		}
 		return Object.entries(table).map(([index, row]) => ({
 			__index: index,

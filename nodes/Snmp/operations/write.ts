@@ -1,7 +1,7 @@
-import { IExecuteFunctions, INodeProperties, NodeParameterValue } from 'n8n-workflow';
+import { IExecuteFunctions, INodeProperties, NodeOperationError, NodeParameterValue } from 'n8n-workflow';
 import { connect, varbindsToExecutionData } from '../utils';
 import { promisify } from 'node:util';
-import { Varbind } from 'net-snmp';
+import { isVarbindError, varbindError, ObjectType, Varbind } from 'net-snmp';
 
 export const properties: INodeProperties[] = [
 	{
@@ -23,7 +23,7 @@ export const properties: INodeProperties[] = [
 		default: {
 			values: [
 				{
-					oid: '',
+					oid: { mode: 'oid', value: '' },
 					value: '',
 				},
 			],
@@ -91,12 +91,18 @@ export async function write(this: IExecuteFunctions, itemIndex: number) {
 	this.logger.debug('write', { data });
 	const session = await connect.call(this, ip, port);
 	try {
-		const oidTypes = Object.fromEntries(
-			(await promisify(session.get).call(
-				session,
-				data.map((i) => i.oid),
-			))!.map((vb) => [vb.oid, vb.type!]),
-		);
+		const getResults = await promisify(session.get).call(session, data.map((i) => i.oid));
+		const oidTypes: Record<string, ObjectType> = {};
+		for (const vb of getResults ?? []) {
+			if (isVarbindError(vb)) {
+				throw new NodeOperationError(
+					this.getNode(),
+					`OID ${vb.oid} does not exist: ${varbindError(vb)}`,
+				);
+			}
+			// vb.type is a valid ObjectType here — isVarbindError above ruled out error types
+			oidTypes[vb.oid] = vb.type as ObjectType;
+		}
 
 		const toWrite: Varbind[] = [];
 		for (const { oid, value } of data) {

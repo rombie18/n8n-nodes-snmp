@@ -109,7 +109,7 @@ declare module 'net-snmp' {
 		pdu: { type: number; id: number; varbinds: Varbind[] };
 	}
 
-	export type ReceiverCallback = (error: Error, notification: ReceiverNotification) => void;
+	export type ReceiverCallback = (error: Error | null, notification: ReceiverNotification) => void;
 
 	export interface ReceiverOptions {
 		port?: number;
@@ -182,6 +182,7 @@ export function varbindsToExecutionData(
 	return (varbinds ?? []).map((vb) => ({
 		oid: vb.oid,
 		name: getName(vb.oid),
+		type: typeToDetailed(vb.type),
 		value: getSingle.call(this, vb),
 	}));
 }
@@ -218,7 +219,7 @@ const SNMP_TYPE_NAMES: { [k in ObjectType | PduType]?: string } = {
 	[PduType.Report]: 'Report',
 };
 
-export function typeToDetailed(type?: ObjectType) {
+export function typeToDetailed(type?: ObjectType | PduType) {
 	return { numeric: type, name: SNMP_TYPE_NAMES[type ?? -1] ?? 'UNKNOWN' };
 }
 
@@ -277,23 +278,10 @@ export function getName(oid: string): string | null {
 			const name = moduleStore.translate(prefix.join('.'), OidFormat.path);
 			return [...name.split('.'), ...suffix].join('.');
 		} catch {
-			// an exception means that prefix wasn't found on translation table, so try to chop the last component off and retry
-			// shuffle prefix[-1] to start of suffix
-			// e.g. prefix=[1, 3, 6, 1, 2, 1, 0], suffix=[]
-			// =>
-			// prefix=[1, 3, 6, 1, 2, 1], suffix=[0]
+			// Prefix not in translation table — chop the last component and retry.
+			// e.g. prefix=[1, 3, 6, 1, 2, 1, 0], suffix=[] → prefix=[1, 3, 6, 1, 2, 1], suffix=[0]
 			suffix.splice(0, 0, prefix.pop()!);
 		}
 	}
-	try {
-		return moduleStore.translate(oid, OidFormat.path);
-	} catch {
-		try {
-			// as a special case, try to find the previous path
-			const exceptLastComponent = oid.split('.').slice(0, -1).join('.');
-			return moduleStore.translate(exceptLastComponent, OidFormat.path);
-		} catch {
-			return null; // give up
-		}
-	}
+	return null;
 }

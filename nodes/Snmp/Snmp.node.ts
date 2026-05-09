@@ -107,7 +107,8 @@ export class Snmp implements INodeType {
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items: INodeExecutionData[] = [];
-		const operation = this.getNodeParameter('operation', 0, 'listOIDs') as string;
+		// operation is the same across all items — read once from item 0
+		const operation = this.getNodeParameter('operation', 0, 'get') as string;
 
 		for (let itemIndex = 0; itemIndex < this.getInputData().length; itemIndex++) {
 			try {

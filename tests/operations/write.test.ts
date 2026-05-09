@@ -89,14 +89,20 @@ describe('write operation', () => {
 	});
 
 	it('writes multiple OIDs in a single call', async () => {
-		const name1 = 'multi-write-1';
+		const newName = 'multi-write-host';
+		const newContact = 'multi@example.com';
 
 		const result = await write.call(
-			writeCtx([{ oid: OID.sysNameInstance, value: name1 }]),
+			writeCtx([
+				{ oid: OID.sysNameInstance, value: newName },
+				{ oid: OID.sysContactInstance, value: newContact },
+			]),
 			0,
 		);
 
-		expect(result).toHaveLength(1);
-		expect(result[0].value).toBe(name1);
+		expect(result).toHaveLength(2);
+		const byOid = Object.fromEntries(result.map((r) => [r.oid, r.value]));
+		expect(byOid[OID.sysNameInstance]).toBe(newName);
+		expect(byOid[OID.sysContactInstance]).toBe(newContact);
 	});
 });
