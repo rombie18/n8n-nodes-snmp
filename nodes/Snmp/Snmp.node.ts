@@ -16,10 +16,11 @@ export class Snmp implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'SNMP',
 		name: 'snmp',
-		icon: { light: 'file:snmp.svg', dark: 'file:snmp.svg' },
+		icon: 'file:snmp.svg',
 		group: ['input'],
 		version: 1,
-		description: 'SNMP Node',
+		subtitle: '={{$parameter["operation"]}}',
+		description: 'Read and write values from SNMP-enabled devices',
 		defaults: {
 			name: 'SNMP',
 		},
@@ -55,14 +56,14 @@ export class Snmp implements INodeType {
 				displayName: 'Operation',
 				name: 'operation',
 				type: 'options',
-				default: 'listOIDs',
+				default: 'get',
 				noDataExpression: true,
 				options: [
 					{
-						name: 'List OIDs',
-						value: 'listOIDs',
-						action: 'List OIDs', // eslint-disable-line n8n-nodes-base/node-param-operation-option-action-miscased
-						description: 'Walks the SNMP tree and returns all descendant entries',
+						name: 'Get Table',
+						value: 'getTable',
+						action: 'Get table of values',
+						description: 'Retrieve the values of several list-type OIDs, formatted as a table',
 					},
 					{
 						name: 'Get Values',
@@ -71,10 +72,10 @@ export class Snmp implements INodeType {
 						description: 'Retrieve the values of one or several OIDs',
 					},
 					{
-						name: 'Get Table',
-						value: 'getTable',
-						action: 'Get table of values',
-						description: 'Retrieve the values of several list-type OIDs, formatted as a table',
+						name: 'List OIDs',
+						value: 'listOIDs',
+						action: 'List OIDs', // eslint-disable-line n8n-nodes-base/node-param-operation-option-action-miscased
+						description: 'Walks the SNMP tree and returns all descendant entries',
 					},
 					{
 						name: 'Write',
@@ -152,11 +153,7 @@ export class Snmp implements INodeType {
 						pairedItem: itemIndex,
 					});
 				} else {
-					if (error.context) {
-						error.context.itemIndex = itemIndex;
-						throw error;
-					}
-					throw new NodeOperationError(this.getNode(), error, { itemIndex });
+					throw new NodeOperationError(this.getNode(), error as Error, { itemIndex });
 				}
 			}
 		}

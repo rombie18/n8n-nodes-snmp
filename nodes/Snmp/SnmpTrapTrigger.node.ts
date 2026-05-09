@@ -12,13 +12,15 @@ export class SnmpTrapTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'SNMP Trap Trigger',
 		name: 'snmpTrapTrigger',
-		icon: { light: 'file:snmp.svg', dark: 'file:snmp.svg' },
+		icon: 'file:snmp.svg',
 		group: ['trigger'],
 		version: 1,
-		description: 'SNMP Trap Trigger',
+		subtitle: '=UDP port {{$parameter["port"]}}',
+		description: 'Receive SNMP traps (v1, v2c, v3) on a local UDP port',
 		defaults: {
-			name: 'Trap Trigger',
+			name: 'SNMP Trap',
 		},
+		usableAsTool: true,
 		inputs: [],
 		outputs: [NodeConnectionTypes.Main],
 		credentials: [
@@ -110,7 +112,11 @@ export class SnmpTrapTrigger implements INodeType {
 		}
 
 		const closeFunction = async () => {
-			session.close();
+			try {
+				session.close();
+			} catch {
+				// Session may have already been closed (e.g. on emitError in manual mode)
+			}
 		};
 
 		return {
